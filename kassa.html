@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kassa Systeem Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        /* ─── Tafel Modal ─────────────────────────────────────────── */
+        #tafel-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(6px);
+        }
+
+        #tafel-modal.hidden {
+            display: none;
+        }
+
+        .modal-box {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 40px 44px;
+            width: 380px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+            color: #1a1a2e;
+            text-align: center;
+        }
+
+        .modal-box h2 {
+            margin: 0 0 8px 0;
+            font-size: 1.6em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #1a1a2e;
+        }
+
+        .modal-box p {
+            margin: 0 0 28px 0;
+            color: #6b7280;
+            font-size: 0.95em;
+        }
+
+        /* Display */
+        #tafel-display {
+            background: #f4f6fa;
+            border: 2px solid #dde1ec;
+            border-radius: 14px;
+            padding: 18px 20px;
+            font-size: 2.8em;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #1a1a2e;
+            margin-bottom: 24px;
+            min-height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s;
+        }
+
+        #tafel-display.has-value {
+            border-color: #27ae60;
+            color: #2ecc71;
+        }
+
+        #tafel-display.placeholder {
+            color: #aab0c6;
+            font-size: 1.4em;
+            letter-spacing: 1px;
+            font-weight: 400;
+        }
+
+        /* Numpad */
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .numpad-btn {
+            background: #f4f6fa;
+            border: 1px solid #dde1ec;
+            border-radius: 12px;
+            color: #1a1a2e;
+            font-size: 1.6em;
+            font-weight: 600;
+            padding: 18px 10px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            user-select: none;
+        }
+
+        .numpad-btn:hover {
+            background: #e4e8f4;
+        }
+
+        .numpad-btn:active {
+            background: #c8d0ea;
+            transform: scale(0.95);
+        }
+
+        .numpad-btn.delete {
+            background: #fde8e8;
+            border-color: #f5c6cb;
+            color: #c0392b;
+            font-size: 1.3em;
+        }
+
+        .numpad-btn.delete:hover {
+            background: #f5c6cb;
+        }
+
+        .numpad-btn.confirm {
+            grid-column: span 3;
+            background: #27ae60;
+            border-color: #219150;
+            font-size: 1.1em;
+            font-weight: 700;
+            padding: 20px 10px;
+            letter-spacing: 1px;
+        }
+
+        .numpad-btn.confirm:hover {
+            background: #219150;
+        }
+
+        .numpad-btn.confirm:disabled {
+            background: #eef0f6;
+            border-color: #dde1ec;
+            color: #aab0c6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ─── Top bar (tafel badge) ───────────────────────────────── */
+        #top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 52px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 16px;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            border-bottom: 1px solid #dde1ec;
+        }
+
+        #tafel-badge {
+            background: #27ae60;
+            color: white;
+            font-weight: 700;
+            font-size: 0.95em;
+            padding: 6px 16px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        #change-tafel-btn {
+            background: none;
+            border: 1px solid #dde1ec;
+            color: #6b7280;
+            font-size: 0.85em;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #change-tafel-btn:hover {
+            border-color: #27ae60;
+            color: #27ae60;
+        }
+
+        /* Spacer for fixed top-bar */
+        #layout {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            padding-top: 52px;
+            box-sizing: border-box;
+        }
+
+        /* ─── Product grid ────────────────────────────────────────── */
+        #product-grid {
+            flex: 3;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 12px;
+            overflow: hidden;
+            border-right: 1px solid #ccc;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .product-card {
+            background: white;
+            padding: 5px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+            border: 1px solid #eee;
+            font-size: 1.15em;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .product-card:hover:not(.disabled) {
+            border-color: #27ae60;
+            transform: translateY(-2px);
+        }
+
+        .product-card:active:not(.disabled) {
+            transform: scale(0.95);
+            background: #f9f9f9;
+        }
+
+        /* Disabled state */
+        .product-card.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            filter: grayscale(60%);
+        }
+
+        /* Categorie kleuren */
+        .cat-bier {
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+        }
+
+        .cat-0-0 {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+
+        .cat-frisdrank {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .cat-andere {
+            background-color: #e2e3e5;
+            border-color: #d6d8db;
+        }
+
+        .cat-borg {
+            background-color: #9dd7a0;
+            border-color: #6ed373;
+        }
+
+        /* ─── Order summary ───────────────────────────────────────── */
+        #order-summary {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            padding: 25px;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        #cart-items {
+            flex-grow: 1;
+            overflow-y: auto;
+            list-style: none;
+            padding: 0;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .qty-badge {
+            background: #27ae60;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .total-section {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 20px 0;
+            padding-top: 15px;
+            border-top: 3px solid #333;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #print-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 30px;
+            font-size: 1.8em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background 0.3s;
+        }
+
+        #print-btn:hover {
+            background-color: #219150;
+        }
+
+        #print-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ── Tafel Modal ── -->
+    <div id="tafel-modal">
+        <div class="modal-box">
+            <h2>VZN Kassa</h2>
+            <p>Voer een tafelnummer in om te beginnen</p>
+            <div id="tafel-display" class="placeholder">Tafel nr.</div>
+            <div class="numpad">
+                <button class="numpad-btn" onclick="numpadInput('1')">1</button>
+                <button class="numpad-btn" onclick="numpadInput('2')">2</button>
+                <button class="numpad-btn" onclick="numpadInput('3')">3</button>
+                <button class="numpad-btn" onclick="numpadInput('4')">4</button>
+                <button class="numpad-btn" onclick="numpadInput('5')">5</button>
+                <button class="numpad-btn" onclick="numpadInput('6')">6</button>
+                <button class="numpad-btn" onclick="numpadInput('7')">7</button>
+                <button class="numpad-btn" onclick="numpadInput('8')">8</button>
+                <button class="numpad-btn" onclick="numpadInput('9')">9</button>
+                <button class="numpad-btn" onclick="numpadInput('0')">0</button>
+                <button class="numpad-btn" onclick="numpadInput('00')">00</button>
+                <button class="numpad-btn delete" onclick="numpadDelete()">⌫</button>
+                <button class="numpad-btn confirm" id="confirm-tafel-btn" onclick="confirmTafel()" disabled> ✓
+                    &nbsp;Bevestigen </button>
+            </div>
+        </div>
+    </div>
+    <!-- ── Top bar ── -->
+    <div id="top-bar">
+        <span id="tafel-badge">Tafel —</span>
+        <button id="change-tafel-btn" onclick="openTafelModal()">✎ Tafel wijzigen</button>
+    </div>
+    <!-- ── Main layout ── -->
+    <div id="layout">
+        <div id="product-grid"></div>
+        <div id="order-summary">
+            <div
+                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; margin-top: 0;">
+                <h2 style="margin: 0;">Bestelling</h2>
+                <button onclick="clearCart()"
+                        style="background:none; border:none; color:#e74c3c; cursor:pointer; font-weight:bold; font-size: 1em; padding: 0;">Reset
+                </button>
+            </div>
+            <ul id="cart-items"></ul>
+            <div class="total-section">
+                <span>Totaal:</span>
+                <span>€<span id="total-price">0.00</span></span>
+            </div>
+            <button id="print-btn" onclick="sendToPrinter()">PRINT TICKET</button>
+        </div>
+    </div>
+    <script>
+        // ── State ──────────────────────────────────────────────────
+        let tafelnummer = null;
+        let numpadValue = '';
+        let cart = [];
+
+        // ── Producten ─────────────────────────────────────────────
+        const producten = [
+            { id: 1, naam: "Pils", prijs: 3.00, categorie: "bier" },
+            { id: 2, naam: "Cuvée Tripel", prijs: 4.50, categorie: "bier" },
+            { id: 3, naam: "Jus de Mer", prijs: 4.50, categorie: "bier" },
+            { id: 4, naam: "Kriek", prijs: 3.50, categorie: "bier" },
+            { id: 5, naam: "Duvel", prijs: 4.50, categorie: "bier" },
+            { id: 6, naam: "Cuvée Bruin", prijs: 4.50, categorie: "bier" },
+            { id: 7, naam: "Hoegaarden", prijs: 3.50, categorie: "bier" },
+            { id: 8, naam: "Leffe Blond", prijs: 4.50, categorie: "bier" },
+            { id: 9, naam: "Leffe Bruin", prijs: 4.50, categorie: "bier" },
+            { id: 10, naam: "Stella 0.0", prijs: 3.00, categorie: "0.0" },
+            { id: 11, naam: "Kriek 0.0", prijs: 3.50, categorie: "0.0" },
+            { id: 12, naam: "Cornet 0.0", prijs: 4.50, categorie: "0.0" },
+            { id: 13, naam: "Water Plat", prijs: 2.50, categorie: "frisdrank" },
+            { id: 14, naam: "Water Spuit", prijs: 2.50, categorie: "frisdrank" },
+            { id: 15, naam: "Cola", prijs: 2.50, categorie: "frisdrank" },
+            { id: 16, naam: "Cola Zero", prijs: 2.50, categorie: "frisdrank" },
+            { id: 17, naam: "Fanta", prijs: 2.50, categorie: "frisdrank" },
+            { id: 18, naam: "Ice Tea", prijs: 2.50, categorie: "frisdrank" },
+            { id: 19, naam: "Koffie", prijs: 2.50, categorie: "andere" },
+            { id: 20, naam: "Wijn Wit", prijs: 5.00, categorie: "andere" },
+            { id: 21, naam: "Wijn Rosé", prijs: 5.00, categorie: "andere" },
+            { id: 22, naam: "Cava Glas", prijs: 5.00, categorie: "andere" },
+            { id: 23, naam: "Cava Fles", prijs: 20.00, categorie: "andere" },
+            { id: 24, naam: "Chips", prijs: 2.00, categorie: "andere" },
+            { id: 25, naam: "Waarborg 5", prijs: 5.00, categorie: "borg" },
+            { id: 26, naam: "Waarborg 2", prijs: 2.00, categorie: "borg" }
+        ];
+
+        // ── Build product grid ─────────────────────────────────────
+        const grid = document.getElementById('product-grid');
+        producten.forEach(p => {
+            const div = document.createElement('div');
+            const catClass = p.categorie === '0.0' ? 'cat-0-0' : 'cat-' + p.categorie;
+            div.className = `product-card ${catClass} disabled`;
+            div.id = `card-${p.id}`;
+            div.innerHTML = `<strong>${p.naam}</strong><br>€${p.prijs.toFixed(2)}`;
+            div.onclick = () => {
+                if (tafelnummer !== null) addToCart(p);
+            };
+            grid.appendChild(div);
+        });
+
+        // ── Numpad logic ───────────────────────────────────────────
+        function numpadInput(val) {
+            if (numpadValue.length >= 4) return; // max 4 digits
+            numpadValue += val;
+            updateDisplay();
+        }
+
+        function numpadDelete() {
+            numpadValue = numpadValue.slice(0, -1);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const display = document.getElementById('tafel-display');
+            const confirmBtn = document.getElementById('confirm-tafel-btn');
+
+            if (numpadValue === '') {
+                display.textContent = 'Tafel nr.';
+                display.classList.add('placeholder');
+                display.classList.remove('has-value');
+                confirmBtn.disabled = true;
+            } else {
+                display.textContent = numpadValue;
+                display.classList.remove('placeholder');
+                display.classList.add('has-value');
+                confirmBtn.disabled = false;
+            }
+        }
+
+        function confirmTafel() {
+            if (!numpadValue) return;
+            tafelnummer = parseInt(numpadValue, 10);
+            numpadValue = '';
+            closeTafelModal();
+            enableCards();
+            document.getElementById('tafel-badge').textContent = `Tafel ${tafelnummer}`;
+            clearCart();
+        }
+
+        function openTafelModal() {
+            numpadValue = '';
+            updateDisplay();
+            document.getElementById('tafel-modal').classList.remove('hidden');
+        }
+
+        function closeTafelModal() {
+            document.getElementById('tafel-modal').classList.add('hidden');
+        }
+
+        function enableCards() {
+            document.querySelectorAll('.product-card').forEach(c => c.classList.remove('disabled'));
+        }
+
+        // ── Cart logic ─────────────────────────────────────────────
+        function addToCart(product) {
+            const existingItem = cart.find(item => item.id === product.id);
+            if (existingItem) {
+                existingItem.qty += 1;
+            } else {
+                cart.push({ ...product, qty: 1 });
+            }
+            updateUI();
+        }
+
+        function clearCart() {
+            cart = [];
+            updateUI();
+        }
+
+        function removeFromCart(id) {
+            const existingItem = cart.find(item => item.id === id);
+            if (existingItem) {
+                existingItem.qty -= 1;
+                if (existingItem.qty <= 0) {
+                    cart = cart.filter(item => item.id !== id);
+                }
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            const list = document.getElementById('cart-items');
+            const totalDisplay = document.getElementById('total-price');
+            const printBtn = document.getElementById('print-btn');
+
+            list.innerHTML = '';
+            let total = 0;
+
+            cart.forEach((item) => {
+                const li = document.createElement('li');
+                li.className = 'cart-item';
+                const subtotal = item.prijs * item.qty;
+
+                li.innerHTML = `
+                    <div style="display: flex; align-items: center;">
+                        <span class="qty-badge">${item.qty}x</span>
+                        <span>${item.naam}</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <span style="margin-right: 15px;">€${subtotal.toFixed(2)}</span>
+                        <button onclick="removeFromCart(${item.id})" style="background: #e74c3c; color: white; border: none; border-radius: 6px; width: 30px; height: 30px; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; line-height: 1; padding-bottom: 3px;">-</button>
+                    </div>
+                `;
+                list.appendChild(li);
+                total += subtotal;
+            });
+
+            totalDisplay.innerText = total.toFixed(2);
+            printBtn.disabled = cart.length === 0;
+        }
+
+        // ── Print ──────────────────────────────────────────────────
+        async function sendToPrinter() {
+            const orderData = {
+                tafelnummer: tafelnummer,
+                datum: new Date().toLocaleString('nl-BE'),
+                artikelen: cart,
+                totaalbedrag: cart.reduce((sum, item) => sum + (item.prijs * item.qty), 0).toFixed(2)
+            };
+
+            console.log("Verzenden naar API:", orderData);
+
+            try {
+                const response = await fetch('http://localhost:8000/print', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                if (response.ok) {
+                    alert("Bon geprint!");
+                    clearCart();
+                } else {
+                    alert("Printer API gaf een foutmelding.");
+                }
+            } catch (error) {
+                alert("Kon geen verbinding maken met de printer service.");
+            }
+        }
+    </script>
+</body>
+
+</html>
