@@ -41,6 +41,7 @@ USB_PRODUCT_ID = 0x2016 # Placeholder (Epson default)
 
 @app.post("/print")
 async def print_ticket(order: OrderData):
+    p = None
     try:
         # Initialize USB Printer
         p = Usb(USB_VENDOR_ID, USB_PRODUCT_ID)
@@ -84,6 +85,9 @@ async def print_ticket(order: OrderData):
     except Exception as e:
         logger.error(f"Printer error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Printer fout: {str(e)}")
+    finally:
+        if p:
+            p.close()
 
 if __name__ == "__main__":
     import uvicorn

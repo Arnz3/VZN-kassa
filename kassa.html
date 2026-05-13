@@ -497,6 +497,10 @@
             document.querySelectorAll('.product-card').forEach(c => c.classList.remove('disabled'));
         }
 
+        function disableCards() {
+            document.querySelectorAll('.product-card').forEach(c => c.classList.add('disabled'));
+        }
+
         // ── Cart logic ─────────────────────────────────────────────
         function addToCart(product) {
             const existingItem = cart.find(item => item.id === product.id);
@@ -567,7 +571,7 @@
             console.log("Verzenden naar API:", orderData);
 
             try {
-                const response = await fetch('http://localhost:5000/print', {
+                const response = await fetch('http://192.168.1.69:5000/print', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(orderData)
@@ -576,6 +580,10 @@
                 if (response.ok) {
                     alert("Bon geprint!");
                     clearCart();
+                    tafelnummer = null;
+                    document.getElementById('tafel-badge').textContent = `Tafel —`;
+                    disableCards();
+                    openTafelModal();
                 } else {
                     alert("Printer API gaf een foutmelding.");
                 }
