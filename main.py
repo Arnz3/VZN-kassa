@@ -1,11 +1,24 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from escpos.printer import Usb
+from database import init_db, close_db, save_order
 import logging
 
-app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+# ── Lifespan: DB connect / disconnect ──────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+    await close_db()
+
+app = FastAPI(lifespan=lifespan)
 
 # Configure CORS to allow the frontend to call this API
 app.add_middleware(
@@ -15,9 +28,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Pydantic models for the incoming JSON payload
 class Artikel(BaseModel):
@@ -42,6 +52,19 @@ USB_PRODUCT_ID = 0x2016 # Placeholder (Epson default)
 
 @app.post("/print")
 async def print_ticket(order: OrderData):
+    # ── 1. Opslaan in database ──────────────────────────────────
+    try:
+        order_id = await save_order(
+            tafelnummer=order.tafelnummer,
+            datum=order.datum,
+            artikelen=[a.model_dump() for a in order.artikelen],
+            totaalbedrag=order.totaalbedrag,
+        )
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database fout: {e}")
+
+    # ── 2. Printen ──────────────────────────────────────────────
     p = None
     try:
         # Initialize USB Printer
@@ -84,13 +107,13 @@ async def print_ticket(order: OrderData):
         
         p.set(align='center')
         p.text("Bedankt voor uw bestelling!\n\n")
-        p.text("=" * 48 + "\n\n\n\n\n\n")
+        p.text("=" * 48 + "\n")
         p.text("www.vzn.be\n")
         
         p.cut()
         
-        logger.info(f"Ticket succesvol geprint: {order.totaalbedrag}")
-        return {"status": "success", "message": "Ticket printed"}
+        logger.info(f"Ticket #{order_id} succesvol geprint: EUR {order.totaalbedrag}")
+        return {"status": "success", "message": "Ticket printed", "order_id": order_id}
         
     except Exception as e:
         logger.error(f"Printer error: {str(e)}")
