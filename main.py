@@ -84,8 +84,8 @@ async def print_ticket(order: OrderData):
         
         p.set(align='center')
         p.text("Bedankt voor uw bestelling!\n\n")
-        p.text("www.vrijezwemmersnieuwpoort.be\n")
         p.text("=" * 48 + "\n\n\n\n\n\n")
+        p.text("www.vzn.be\n")
         
         p.cut()
         
