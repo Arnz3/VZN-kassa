@@ -28,6 +28,7 @@ class Artikel(BaseModel):
     categorie: str = None
 
 class OrderData(BaseModel):
+    tafelnummer: int = None
     datum: str
     artikelen: List[Artikel]
     totaalbedrag: str
@@ -48,10 +49,18 @@ async def print_ticket(order: OrderData):
 
         # Header
         p.set(align='center', font='a', width=2, height=2)
-        p.text("VRIJE ZWEMMERS NIEUWPOORT\n")
-        p.text("=================\n\n")
+        p.text("VRIJE ZWEMMERS\n")
+        p.text("NIEUWPOORT\n")
+        p.set(align='center', font='a', width=1, height=1)
+        p.text("=" * 48 + "\n\n")
 
+        # Tafel & datum
         p.set(align='left', font='a', width=1, height=1)
+        if order.tafelnummer is not None:
+            p.set(align='center', font='a', width=2, height=2)
+            p.text(f"TAFEL {order.tafelnummer}\n")
+            p.set(align='left', font='a', width=1, height=1)
+            p.text("\n")
         p.text(f"Datum: {order.datum}\n\n")
         
         # Print items (aangepast voor een standaard 80mm printer = 48 karakters. Verander 48 naar 32 voor 58mm)
@@ -74,8 +83,9 @@ async def print_ticket(order: OrderData):
         p.text(f"TOTAAL: EUR {order.totaalbedrag}\n\n")
         
         p.set(align='center')
-        p.text("Bedankt voor uw bestelling!\n")
-        p.text("===========================\n\n\n\n\n\n")
+        p.text("Bedankt voor uw bestelling!\n\n")
+        p.text("www.vrijezwemmersnieuwpoort.be\n")
+        p.text("=" * 48 + "\n\n\n\n\n\n")
         
         p.cut()
         
