@@ -497,6 +497,10 @@
             document.querySelectorAll('.product-card').forEach(c => c.classList.remove('disabled'));
         }
 
+        function disableCards() {
+            document.querySelectorAll('.product-card').forEach(c => c.classList.add('disabled'));
+        }
+
         // ── Cart logic ─────────────────────────────────────────────
         function addToCart(product) {
             const existingItem = cart.find(item => item.id === product.id);
@@ -576,6 +580,10 @@
                 if (response.ok) {
                     alert("Bon geprint!");
                     clearCart();
+                    tafelnummer = null;
+                    document.getElementById('tafel-badge').textContent = `Tafel —`;
+                    disableCards();
+                    openTafelModal();
                 } else {
                     alert("Printer API gaf een foutmelding.");
                 }
