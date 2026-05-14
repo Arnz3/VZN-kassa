@@ -52,19 +52,7 @@ USB_PRODUCT_ID = 0x2016 # Placeholder (Epson default)
 
 @app.post("/print")
 async def print_ticket(order: OrderData):
-    # ── 1. Opslaan in database ──────────────────────────────────
-    try:
-        order_id = await save_order(
-            tafelnummer=order.tafelnummer,
-            datum=order.datum,
-            artikelen=[a.model_dump() for a in order.artikelen],
-            totaalbedrag=order.totaalbedrag,
-        )
-    except Exception as e:
-        logger.error(f"Database error: {e}")
-        raise HTTPException(status_code=500, detail=f"Database fout: {e}")
-
-    # ── 2. Printen ──────────────────────────────────────────────
+    # ── 1. Printen ──────────────────────────────────────────────
     p = None
     try:
         # Initialize USB Printer
@@ -112,15 +100,28 @@ async def print_ticket(order: OrderData):
         
         p.cut()
         
-        logger.info(f"Ticket #{order_id} succesvol geprint: EUR {order.totaalbedrag}")
-        return {"status": "success", "message": "Ticket printed", "order_id": order_id}
-        
     except Exception as e:
         logger.error(f"Printer error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Printer fout: {str(e)}")
     finally:
         if p:
             p.close()
+
+    # ── 2. Opslaan in database (enkel als printen is gelukt) ─────
+    try:
+        order_id = await save_order(
+            tafelnummer=order.tafelnummer,
+            datum=order.datum,
+            artikelen=[a.model_dump() for a in order.artikelen],
+            totaalbedrag=order.totaalbedrag,
+        )
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        # We raise hier ook een error, maar het ticket is wel al geprint!
+        raise HTTPException(status_code=500, detail=f"Database fout (ticket wel geprint!): {e}")
+
+    logger.info(f"Ticket #{order_id} succesvol geprint en opgeslagen: EUR {order.totaalbedrag}")
+    return {"status": "success", "message": "Ticket printed and saved", "order_id": order_id}
 
 if __name__ == "__main__":
     import uvicorn
