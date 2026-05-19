@@ -7,7 +7,13 @@ from escpos.printer import Usb
 from database import init_db, close_db, save_order
 import logging
 
-logging.basicConfig(level=logging.INFO)
+# 1. Log configuratie
+logging.basicConfig(
+    filename='/home/arnz3/logs/vzn_kassa.log',
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s]: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 
