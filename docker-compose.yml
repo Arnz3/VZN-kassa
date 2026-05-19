@@ -12,5 +12,14 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  web:
+    image: nginx:alpine
+    container_name: kassa-web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./kassa.html:/usr/share/nginx/html/index.html:ro
+    restart: unless-stopped
+
 volumes:
   pgdata:
