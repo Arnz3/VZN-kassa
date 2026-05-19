@@ -1,4 +1,5 @@
 import os
+import asyncio
 # pyrefly: ignore [missing-import]
 import asyncpg
 import logging
@@ -13,33 +14,45 @@ DATABASE_URL = os.getenv(
 pool: asyncpg.Pool = None
 
 
-async def init_db():
+async def init_db(max_retries=5, delay=20):
     """Create connection pool and ensure tables exist."""
     global pool
-    pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
-
-    async with pool.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bestellingen (
-                id            SERIAL PRIMARY KEY,
-                tafelnummer   INTEGER,
-                datum         TEXT NOT NULL,
-                totaalbedrag  NUMERIC(10,2) NOT NULL,
-                created_at    TIMESTAMP DEFAULT NOW()
-            );
-        """)
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bestelling_items (
-                id              SERIAL PRIMARY KEY,
-                bestelling_id   INTEGER NOT NULL REFERENCES bestellingen(id) ON DELETE CASCADE,
-                product_id      INTEGER NOT NULL,
-                naam            TEXT NOT NULL,
-                prijs           NUMERIC(10,2) NOT NULL,
-                qty             INTEGER NOT NULL,
-                categorie       TEXT
-            );
-        """)
-    logger.info("Database geïnitialiseerd")
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
+        
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bestellingen (
+                        id            SERIAL PRIMARY KEY,
+                        tafelnummer   INTEGER,
+                        datum         TEXT NOT NULL,
+                        totaalbedrag  NUMERIC(10,2) NOT NULL,
+                        created_at    TIMESTAMP DEFAULT NOW()
+                    );
+                """)
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bestelling_items (
+                        id              SERIAL PRIMARY KEY,
+                        bestelling_id   INTEGER NOT NULL REFERENCES bestellingen(id) ON DELETE CASCADE,
+                        product_id      INTEGER NOT NULL,
+                        naam            TEXT NOT NULL,
+                        prijs           NUMERIC(10,2) NOT NULL,
+                        qty             INTEGER NOT NULL,
+                        categorie       TEXT
+                    );
+                """)
+            logger.info("Database geïnitialiseerd")
+            return
+        except Exception as e:
+            logger.warning(f"Kan geen verbinding maken met de database (poging {attempt}/{max_retries}): {e}")
+            if attempt < max_retries:
+                logger.info(f"Opnieuw proberen over {delay} seconden...")
+                await asyncio.sleep(delay)
+            else:
+                logger.error("Maximale pogingen bereikt. Kan de database niet initialiseren.")
+                raise e
 
 
 async def close_db():
